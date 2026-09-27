@@ -19,6 +19,9 @@ BANNED = re.compile(
 # SKILL.md "줄일 것": 한 편에 2회까지 허용
 REDUCE = ["결국", "아니라", "것이다", "하지만", "그리고", "물론", "우리는",
           "에 대해", "통해", "수 있다", "어쩌면", "솔직히"]
+# SKILL.md "Opus 5.5 버릇": 사람(출간 작가 100편)보다 Opus 5.5가 훨씬 많이 쓰는 표현
+OPUS_TICS = re.compile(r"아니라|아니다\.|[는은]데[, ]|에 가깝|에 가까운|면 된다|만하다|마주하")
+HUMAN_TICS = 1.5  # 출간 작가 100편에서 같은 정규식의 1,000자당 빈도
 HUMAN_CV = 0.56  # 출간 작가 100편 문장 길이 변동계수 중앙값
 
 
@@ -48,6 +51,7 @@ def score(text, facts):
     return {
         "뺄것": len(BANNED.findall(text)),
         "줄일것초과": sum(max(0, text.count(w) - 2) for w in REDUCE),
+        "Opus버릇": len(OPUS_TICS.findall(text)) * 1000 / max(len(text), 1),
         "CV": cv,
         "길이규칙": length_rule(text),
         "사실보존": sum(f in text for f in facts) / len(facts),
@@ -65,14 +69,14 @@ def load_samples():
 def row(name, scores):
     avg = {k: statistics.mean([s[k] for s in scores if s[k] is not None] or [0]) for k in scores[0]}
     return (f"| {name} | {avg['뺄것']:.1f} | {avg['줄일것초과']:.1f} | "
-            f"{avg['CV']:.2f} | {avg['길이규칙']*100:.0f}% | {avg['사실보존']*100:.0f}% | {len(scores)} |")
+            f"{avg['Opus버릇']:.1f} | {avg['CV']:.2f} | {avg['길이규칙']*100:.0f}% | {avg['사실보존']*100:.0f}% | {len(scores)} |")
 
 
 def main():
     samples = load_samples()
     detail = "--detail" in sys.argv
-    print(f"| 조건 | 뺄 것 (0이 목표) | 줄일 것 초과 (0이 목표) | 문장 길이 CV (사람 {HUMAN_CV}) | 길이 규칙 지킨 문단 | 사실 보존 | 편수 |")
-    print("|---|---|---|---|---|---|---|")
+    print(f"| 조건 | 뺄 것 (0이 목표) | 줄일 것 초과 (0이 목표) | Opus 버릇 /천자 (사람 {HUMAN_TICS}) | 문장 길이 CV (사람 {HUMAN_CV}) | 길이 규칙 지킨 문단 | 사실 보존 | 편수 |")
+    print("|---|---|---|---|---|---|---|---|")
     print(row("원문", [score(t, f) for f, t in samples.values()]))
     for d in sorted((ROOT / "out").glob("*/*")):
         scored, lines = [], []
@@ -82,7 +86,7 @@ def main():
                 s = score(body(p.read_text()), facts)
                 scored.append(s)
                 if detail:
-                    lines.append(f"|   {name} | {s['뺄것']} | {s['줄일것초과']} | {s['CV']:.2f} | {'-' if s['길이규칙'] is None else f"{s['길이규칙']*100:.0f}%"} | {s['사실보존']*100:.0f}% | |")
+                    lines.append(f"|   {name} | {s['뺄것']} | {s['줄일것초과']} | {s['Opus버릇']:.1f} | {s['CV']:.2f} | {'-' if s['길이규칙'] is None else f"{s['길이규칙']*100:.0f}%"} | {s['사실보존']*100:.0f}% | |")
         if scored:
             print(row(f"{d.parent.name} / {d.name}", scored))
             for line in lines:

@@ -2,12 +2,12 @@
 # 샘플 5개를 모델별로 두 조건에서 돌린다.
 #   skill    : SKILL.md를 시스템 프롬프트에 붙이고 "다음 글을 고쳐줘."
 #   baseline : 스킬 없이 "AI 티를 빼고 사람이 쓴 것처럼 고쳐줘."
-# 사용법: evals/run.sh [모델 ...]   (기본: opus 5.5, sonnet 5, haiku 4.5)
+# 사용법: evals/run.sh [모델 ...]   (기본: opus 5.5. 이 스킬은 Opus 5.5 전용이다)
 # 결과: evals/out/{조건}/{모델}/{샘플}.txt → python3 evals/score.py 로 채점
 set -euo pipefail
 cd "$(dirname "$0")"
 models=("$@")
-[ ${#models[@]} -eq 0 ] && models=(claude-opus-5-5 claude-sonnet-5 claude-haiku-4-5-20251001)
+[ ${#models[@]} -eq 0 ] && models=(claude-opus-5-5)
 
 one() {
   local cond=$1 model=$2 sample=$3 prompt
