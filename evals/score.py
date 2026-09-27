@@ -24,6 +24,8 @@ REDUCE = ["결국", "아니라", "것이다", "하지만", "그리고", "물론"
 # SKILL.md "Opus 5.5 버릇": 사람(출간 작가 100편)보다 Opus 5.5가 훨씬 많이 쓰는 표현
 OPUS_TICS = re.compile(r"아니라|아니다\.|[는은]데[, ]|에 가깝|에 가까운|면 된다|만하다|마주하")
 HUMAN_TICS = 1.5  # 출간 작가 100편에서 같은 정규식의 1,000자당 빈도
+# SKILL.md "번역투와 구조"의 설명 글 규칙: 문두 연결어 연쇄, 이유 꼬리, 발견담
+STRUCT = re.compile(r"(?:^|[.?!]\s+|\n)(?:그런데|그래서|대신|따라서)[ ,]|기 때문[이입]|처음에는|처음엔")
 HUMAN_CV = 0.56  # 출간 작가 100편 문장 길이 변동계수 중앙값
 
 
@@ -54,6 +56,7 @@ def score(text, facts, original=None):
         "뺄것": len(BANNED.findall(text)),
         "줄일것초과": sum(max(0, text.count(w) - 2) for w in REDUCE),
         "Opus버릇": len(OPUS_TICS.findall(text)) * 1000 / max(len(text), 1),
+        "구조버릇": len(STRUCT.findall(text)) * 1000 / max(len(text), 1),
         "CV": cv,
         "길이규칙": length_rule(text),
         "사실보존": sum(f in text for f in facts) / len(facts) if facts else None,
@@ -67,6 +70,7 @@ COLUMNS = [
     ("뺄 것 (0이 목표)", "뺄것", "{:.1f}"),
     ("줄일 것 초과 (0이 목표)", "줄일것초과", "{:.1f}"),
     (f"Opus 버릇 /천자 (사람 {HUMAN_TICS})", "Opus버릇", "{:.1f}"),
+    ("구조 버릇 /천자", "구조버릇", "{:.1f}"),
     (f"문장 길이 CV (사람 {HUMAN_CV})", "CV", "{:.2f}"),
     ("길이 규칙 지킨 문단", "길이규칙", "{:.0%}"),
     ("사실 보존", "사실보존", "{:.0%}"),
@@ -130,6 +134,7 @@ if __name__ == "__main__":
     t = score("진정한 여정이었다 — 결국 결국 결국. 짧다.", ["여정"], "진정한 여정이었다")
     assert t["뺄것"] == 3 and t["줄일것초과"] == 1 and t["사실보존"] == 1 and 0 < t["변경률"] < 1, t
     assert score("글", [])["사실보존"] is None
+    assert len(STRUCT.findall("처음에는 몰랐다. 그런데 알았다.\n그래서 바꿨다. 바쁘기 때문이다.")) == 4
     assert length_rule("짧다. " + "가" * 70 + ". 보통 길이의 문장이다.") == 1.0
     assert body("고친 글\n\n---\n- 메모") == "고친 글"
     main()
