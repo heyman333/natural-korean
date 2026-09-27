@@ -2,7 +2,9 @@
 
 python3 evals/score.py            # 채점표
 python3 evals/score.py --detail   # 샘플별 점수까지
+python3 evals/score.py --brunch   # samples-brunch/·out-brunch/ 채점 (fetch_brunch.py 로 먼저 받는다)
 """
+import difflib
 import re
 import statistics
 import sys
@@ -45,7 +47,7 @@ def length_rule(text):
     return sum(ok) / len(ok) if ok else None  # 대상 문단이 없으면 평균에서 뺀다
 
 
-def score(text, facts):
+def score(text, facts, original=None):
     lens = [len(s) for s in sentences(text)]
     cv = statistics.pstdev(lens) / statistics.mean(lens) if lens else 0
     return {
@@ -54,49 +56,80 @@ def score(text, facts):
         "Opus버릇": len(OPUS_TICS.findall(text)) * 1000 / max(len(text), 1),
         "CV": cv,
         "길이규칙": length_rule(text),
-        "사실보존": sum(f in text for f in facts) / len(facts),
+        "사실보존": sum(f in text for f in facts) / len(facts) if facts else None,
+        # 원문 대비 바뀐 비율. 사람 글 대조군에서는 낮을수록 좋다
+        "변경률": 1 - difflib.SequenceMatcher(None, original, text, autojunk=False).ratio() if original else 0.0,
     }
 
 
-def load_samples():
-    out = {}
-    for p in sorted((ROOT / "samples").glob("*.txt")):
-        head, text = p.read_text().split("\n", 1)
-        out[p.stem] = ([f.strip() for f in head.removeprefix("facts:").split("|")], text.strip())
-    return out
+# (열 이름, 점수 키, 서식)
+COLUMNS = [
+    ("뺄 것 (0이 목표)", "뺄것", "{:.1f}"),
+    ("줄일 것 초과 (0이 목표)", "줄일것초과", "{:.1f}"),
+    (f"Opus 버릇 /천자 (사람 {HUMAN_TICS})", "Opus버릇", "{:.1f}"),
+    (f"문장 길이 CV (사람 {HUMAN_CV})", "CV", "{:.2f}"),
+    ("길이 규칙 지킨 문단", "길이규칙", "{:.0%}"),
+    ("사실 보존", "사실보존", "{:.0%}"),
+    ("변경률", "변경률", "{:.0%}"),
+]
+
+
+def cells(values):
+    return " | ".join("-" if values[k] is None else f.format(values[k]) for _, k, f in COLUMNS)
 
 
 def row(name, scores):
-    avg = {k: statistics.mean([s[k] for s in scores if s[k] is not None] or [0]) for k in scores[0]}
-    return (f"| {name} | {avg['뺄것']:.1f} | {avg['줄일것초과']:.1f} | "
-            f"{avg['Opus버릇']:.1f} | {avg['CV']:.2f} | {avg['길이규칙']*100:.0f}% | {avg['사실보존']*100:.0f}% | {len(scores)} |")
+    avg = {}
+    for k in scores[0]:
+        vals = [s[k] for s in scores if s[k] is not None]
+        avg[k] = statistics.mean(vals) if vals else None
+    return f"| {name} | {cells(avg)} | {len(scores)} |"
+
+
+def load_samples(folder):
+    out = {}
+    for p in sorted((ROOT / folder).glob("*.txt")):
+        head, text = p.read_text().split("\n", 1)
+        facts = [f.strip() for f in head.removeprefix("facts:").split("|") if f.strip()]
+        out[p.stem] = (facts, text.strip())
+    return out
+
+
+def table(samples, outdir, detail):
+    print("| 조건 | " + " | ".join(c for c, _, _ in COLUMNS) + " | 편수 |")
+    print("|---" * (len(COLUMNS) + 2) + "|")
+    print(row("원문", [score(t, f) for f, t in samples.values()]))
+    for d in sorted(outdir.glob("*/*")):
+        scored, lines = [], []
+        for name, (facts, original) in samples.items():
+            p = d / f"{name}.txt"
+            if p.exists():
+                s = score(body(p.read_text()), facts, original)
+                scored.append(s)
+                lines.append(f"|   {name} | {cells(s)} | |")
+        if scored:
+            print(row(f"{d.parent.name} / {d.name}", scored))
+            if detail:
+                print("\n".join(lines))
 
 
 def main():
-    samples = load_samples()
     detail = "--detail" in sys.argv
-    print(f"| 조건 | 뺄 것 (0이 목표) | 줄일 것 초과 (0이 목표) | Opus 버릇 /천자 (사람 {HUMAN_TICS}) | 문장 길이 CV (사람 {HUMAN_CV}) | 길이 규칙 지킨 문단 | 사실 보존 | 편수 |")
-    print("|---|---|---|---|---|---|---|---|")
-    print(row("원문", [score(t, f) for f, t in samples.values()]))
-    for d in sorted((ROOT / "out").glob("*/*")):
-        scored, lines = [], []
-        for name, (facts, _) in samples.items():
-            p = d / f"{name}.txt"
-            if p.exists():
-                s = score(body(p.read_text()), facts)
-                scored.append(s)
-                if detail:
-                    lines.append(f"|   {name} | {s['뺄것']} | {s['줄일것초과']} | {s['Opus버릇']:.1f} | {s['CV']:.2f} | {'-' if s['길이규칙'] is None else f"{s['길이규칙']*100:.0f}%"} | {s['사실보존']*100:.0f}% | |")
-        if scored:
-            print(row(f"{d.parent.name} / {d.name}", scored))
-            for line in lines:
-                print(line)
+    if "--brunch" not in sys.argv:
+        table(load_samples("samples"), ROOT / "out", detail)
+        return
+    samples = load_samples("samples-brunch")
+    # AI 티 상위(a)와 사람 글 대조군(h)을 따로 본다
+    for prefix, label in (("a", "AI 티 상위"), ("h", "사람 글 대조군")):
+        print(f"\n**{label}**\n")
+        table({k: v for k, v in samples.items() if k.startswith(prefix)}, ROOT / "out-brunch", detail)
 
 
 if __name__ == "__main__":
     # 자체 점검: 채점 규칙이 깨지면 여기서 멈춘다
-    t = score("진정한 여정이었다 — 결국 결국 결국. 짧다.", ["여정"])
-    assert t["뺄것"] == 3 and t["줄일것초과"] == 1 and t["사실보존"] == 1, t
+    t = score("진정한 여정이었다 — 결국 결국 결국. 짧다.", ["여정"], "진정한 여정이었다")
+    assert t["뺄것"] == 3 and t["줄일것초과"] == 1 and t["사실보존"] == 1 and 0 < t["변경률"] < 1, t
+    assert score("글", [])["사실보존"] is None
     assert length_rule("짧다. " + "가" * 70 + ". 보통 길이의 문장이다.") == 1.0
     assert body("고친 글\n\n---\n- 메모") == "고친 글"
     main()

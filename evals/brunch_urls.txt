@@ -1,0 +1,22 @@
+# 2026-09-27 브런치 최신글 531편 중 2~4분 분량 본문 150편을 채점해 골랐다(작가당 1편).
+# aNN: AI 티 점수 상위 14편 (뺄 것·부정 대조 빈도가 높고 문장 길이가 고른 글. 사람이 쓴 문학 글도 섞여 있을 수 있다)
+# hNN: AI 티 점수 0, 문장 길이 변동계수 0.55 이상, 대사가 있는 글 5편 (과하게 고치지 않는지 보는 대조군)
+a01 https://brunch.co.kr/@alwaysyes/703
+a02 https://brunch.co.kr/@kk2daddy/279
+a03 https://brunch.co.kr/@cncduchess/54
+a04 https://brunch.co.kr/@twodreams09/313
+a05 https://brunch.co.kr/@jamieya/12
+a06 https://brunch.co.kr/@jamesan/1405
+a07 https://brunch.co.kr/@kimjichook/57
+a08 https://brunch.co.kr/@375e828d4931490/34
+a09 https://brunch.co.kr/@hedgeedu/278
+a10 https://brunch.co.kr/@010f63adc4b64db/211
+a11 https://brunch.co.kr/@mangmangdylujz/2324
+a12 https://brunch.co.kr/@izalco/92
+a13 https://brunch.co.kr/@9ad4026aa618440/771
+a14 https://brunch.co.kr/@pstory/53
+h01 https://brunch.co.kr/@kimbada/13
+h02 https://brunch.co.kr/@17a5cc92f24e4d6/327
+h03 https://brunch.co.kr/@43afde821a44407/28
+h04 https://brunch.co.kr/@seonhan/98
+h05 https://brunch.co.kr/@144721ecca01404/146
