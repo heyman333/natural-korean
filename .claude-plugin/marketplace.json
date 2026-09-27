@@ -1,0 +1,15 @@
+{
+  "name": "natural-korean",
+  "description": "Claude가 쓴 한글에서 AI 티를 걷어내는 스킬 마켓플레이스",
+  "owner": {
+    "name": "heyman333"
+  },
+  "plugins": [
+    {
+      "name": "natural-korean",
+      "source": "./",
+      "description": "Claude가 쓴 한글에서 AI 티를 한 번에 걷어내는 스킬",
+      "version": "0.1.0"
+    }
+  ]
+}

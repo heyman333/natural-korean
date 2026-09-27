@@ -1,0 +1,12 @@
+{
+  "name": "natural-korean",
+  "version": "0.1.0",
+  "description": "Claude가 쓴 한글에서 AI 티를 한 번에 걷어내는 스킬",
+  "author": {
+    "name": "heyman333"
+  },
+  "homepage": "https://github.com/heyman333/natural-korean",
+  "repository": "https://github.com/heyman333/natural-korean",
+  "license": "MIT",
+  "keywords": ["korean", "claude", "humanize", "윤문", "번역투"]
+}
