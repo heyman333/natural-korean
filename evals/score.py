@@ -34,6 +34,14 @@ def sentences(text):
     return [x.strip() for x in s if len(x.strip()) > 1 and re.search(r"[가-힣]", x)]
 
 
+def length_rule(text):
+    """SKILL.md 규칙: 3문장 이상 문단마다 15자 이하 문장과 70자 이상 문장이 하나씩. 지킨 문단 비율."""
+    paras = [[len(s) for s in sentences(p)] for p in re.split(r"\n\s*\n", text)]
+    paras = [L for L in paras if len(L) >= 3]
+    ok = [min(L) <= 15 and max(L) >= 70 for L in paras]
+    return sum(ok) / len(ok) if ok else None  # 대상 문단이 없으면 평균에서 뺀다
+
+
 def score(text, facts):
     lens = [len(s) for s in sentences(text)]
     cv = statistics.pstdev(lens) / statistics.mean(lens) if lens else 0
@@ -41,6 +49,7 @@ def score(text, facts):
         "뺄것": len(BANNED.findall(text)),
         "줄일것초과": sum(max(0, text.count(w) - 2) for w in REDUCE),
         "CV": cv,
+        "길이규칙": length_rule(text),
         "사실보존": sum(f in text for f in facts) / len(facts),
     }
 
@@ -54,16 +63,16 @@ def load_samples():
 
 
 def row(name, scores):
-    avg = {k: statistics.mean(s[k] for s in scores) for k in scores[0]}
+    avg = {k: statistics.mean([s[k] for s in scores if s[k] is not None] or [0]) for k in scores[0]}
     return (f"| {name} | {avg['뺄것']:.1f} | {avg['줄일것초과']:.1f} | "
-            f"{avg['CV']:.2f} | {avg['사실보존']*100:.0f}% | {len(scores)} |")
+            f"{avg['CV']:.2f} | {avg['길이규칙']*100:.0f}% | {avg['사실보존']*100:.0f}% | {len(scores)} |")
 
 
 def main():
     samples = load_samples()
     detail = "--detail" in sys.argv
-    print(f"| 조건 | 뺄 것 (0이 목표) | 줄일 것 초과 (0이 목표) | 문장 길이 CV (사람 {HUMAN_CV}) | 사실 보존 | 편수 |")
-    print("|---|---|---|---|---|---|")
+    print(f"| 조건 | 뺄 것 (0이 목표) | 줄일 것 초과 (0이 목표) | 문장 길이 CV (사람 {HUMAN_CV}) | 길이 규칙 지킨 문단 | 사실 보존 | 편수 |")
+    print("|---|---|---|---|---|---|---|")
     print(row("원문", [score(t, f) for f, t in samples.values()]))
     for d in sorted((ROOT / "out").glob("*/*")):
         scored, lines = [], []
@@ -73,7 +82,7 @@ def main():
                 s = score(body(p.read_text()), facts)
                 scored.append(s)
                 if detail:
-                    lines.append(f"|   {name} | {s['뺄것']} | {s['줄일것초과']} | {s['CV']:.2f} | {s['사실보존']*100:.0f}% | |")
+                    lines.append(f"|   {name} | {s['뺄것']} | {s['줄일것초과']} | {s['CV']:.2f} | {'-' if s['길이규칙'] is None else f"{s['길이규칙']*100:.0f}%"} | {s['사실보존']*100:.0f}% | |")
         if scored:
             print(row(f"{d.parent.name} / {d.name}", scored))
             for line in lines:
@@ -84,5 +93,6 @@ if __name__ == "__main__":
     # 자체 점검: 채점 규칙이 깨지면 여기서 멈춘다
     t = score("진정한 여정이었다 — 결국 결국 결국. 짧다.", ["여정"])
     assert t["뺄것"] == 3 and t["줄일것초과"] == 1 and t["사실보존"] == 1, t
+    assert length_rule("짧다. " + "가" * 70 + ". 보통 길이의 문장이다.") == 1.0
     assert body("고친 글\n\n---\n- 메모") == "고친 글"
     main()

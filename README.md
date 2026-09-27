@@ -77,6 +77,16 @@ mkdir -p ~/.claude/skills/natural-korean && curl -fsSL https://raw.githubusercon
 
 7년, 3월, 아침 6시, 한강 같은 사실은 그대로 두고 문체만 바꿉니다. 원문에 없는 내용은 지어내지 않고, 구체적인 내용을 채우면 좋아질 자리는 글 뒤에 따로 알려줍니다.
 
+## eval
+
+`evals/`에 AI 문체 샘플 5개와 채점기가 있습니다. 모델별 결과는 [evals/RESULTS.md](evals/RESULTS.md)에 있습니다.
+
+```bash
+evals/run.sh
+```
+
+요약하면 이렇습니다. 뺄 표현은 Opus 5.5, Sonnet 5, Haiku 4.5 모두 잘 뺍니다. 문장 길이를 사람 글처럼 섞는 건 Opus 5.5에서만 됐습니다(CV 0.38 → 0.64, 사람 글 0.56). Sonnet과 Haiku에서는 효과가 작습니다.
+
 ## 기여
 
 AI 티가 나는 새로운 패턴을 찾으면 이슈나 PR로 알려주세요. 고치기 전과 후 예문이 함께 있으면 좋습니다.
